@@ -16,18 +16,24 @@ class ContinuousFileLogger(Thread):
         while not os.path.exists(self._filename):
             time.sleep(0.1)
         file = self.open_default_encoding(self._filename, mode='r')
-        while not self._stop_reading:
+        while True:
             where = file.tell()
             line = file.readline()
+            if self._stop_reading and not line:
+                break
             if not line:
                 time.sleep(1)
                 file.seek(where)
             else:
+                if sys.stdout.closed:
+                    return
                 self._logger.log("UNITY", line)
                 self._content.append(line)
 
     def stop(self):
         self._stop_reading = True
+        # Wait for thread read the remaining log after process quit in 5 seconds
+        self.join(5)
 
     def get_current_content(self):
         return self._content
